@@ -5,18 +5,15 @@ var under = require('underscore');
 
 Pokemandb.find(function(err, pokemans) {
   if (err) console.log(err);
-  pokemans.forEach(scrapeIntroduce(pokeman));
+  pokemans.forEach(scrapeIntroduce);
 })
-
-var scraper = scraperjs.StaticScraper.create('http://wiki.52poke.com/index.php?title='++'&action=edit');
-
-
 
 function scrapeIntroduce(pokeman) {
   scraperjs.StaticScraper.create('http://wiki.52poke.com/index.php?title=' + pokeman.Name + '&action=edit')
     .scrape(function($) {
         var draft = $('textarea').text();
-
+        return draft;
+      },function(draft){
         var flags = [{Outlook:'===外貌==='}, {SexDifferent:'====性别差异===='}, {Ability:'====特殊能力===='}, {Disposition:'===性情==='}, {Habitat:'===栖息地==='}, {Food:'===饮食==='}, {Cartoon:'==动画中=='}];
 
         var reg = /{{m\||}}|\[\[|\]\]|{{main\|/g;
@@ -47,15 +44,6 @@ function scrapeIntroduce(pokeman) {
 
         //--------------------------------------------------------
 
-        // pokeman.Introduce ={
-        //   Outlook: Title.list[0].text;
-        //   Ability: Title.list[2].text,
-        //   SexDifferent: Title.list[1].text,
-        //   Disposition: Title.list[3].text,
-        //   Habitat: Title.list[4].text,
-        //   Food: Title.list[5].text
-        // };
-
         Title.list.forEach(function(content,index,array){
           if (index != array.length - 1)
             pokeman.Introduce[content.name] = content.text;
@@ -63,12 +51,26 @@ function scrapeIntroduce(pokeman) {
 
         var otherIntro = new Title('otherIntro','xdex=');
         otherIntro.index = {startIndex: draft.indexOf(otherIntro.str), endIndex:otherIntro.startIndex+otherIntro.str.length};
-        otherIntro.text = draft.split(otherIntro.str)[1].split('{{',2)[0].trim().replace(reg, '');
-        
-        pokeman.OtherIntroduce = otherIntro.text;
-      }
-  }
+        if (draft.split(otherIntro.str)[1] != null){
 
+          otherIntro.text = draft.split(otherIntro.str)[1].split('{{',2)[0].trim().replace(reg, '');
+        }
+        else if(draft.split('bwdex=')[1] != null){
+          otherIntro.text = draft.split('bwdex=')[1].split('{{',2)[0].trim().replace(reg, '');
+        }
+        else
+        {
+          otherIntro.text = '';
+        }
+
+        pokeman.OtherIntroduce = otherIntro.text;
+        pokeman.save(function(err){
+          if(err)
+            console.log(err);
+          console.log('ok');
+        });
+      })
+  }
 
   var Title = function(name,str) {
     this.name = name;
